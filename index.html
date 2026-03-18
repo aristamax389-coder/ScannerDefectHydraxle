@@ -1,25 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanner Defect - PT HYDRAXLE PERKASA</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fdf5e6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 360px; text-align: center; border: 1px solid #eee; }
-    .company-name { color: #e74c3c; font-weight: bold; font-size: 14px; margin-bottom: 5px; text-transform: uppercase; }
-    .title { font-size: 22px; font-weight: 800; color: #333; margin-bottom: 5px; }
-    .subtitle { font-size: 13px; color: #888; margin-bottom: 25px; }
-    #reader { width: 100%; border-radius: 12px; display: none; margin-bottom: 20px; overflow: hidden; background: #000; }
-    .btn-scan { background: linear-gradient(135deg, #ff8c00 0%, #ff4500 100%); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255,69,0,0.3); transition: transform 0.2s; }
-    .btn-scan:active { transform: scale(0.98); }
+    /* CSS BARU UNTUK ESTETIKA MODAL/POP-UP */
+    :root { --primary-color: #2a52be; --accent-orange: #ff8c00; --accent-red: #e74c3c; --success-green: #2ecc71; --bg-light: #fdf5e6; }
+    body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-light); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; box-sizing: border-box; }
+    .card { background: white; padding: 40px 30px; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.08); width: 100%; max-width: 400px; text-align: center; border: 1px solid #f0f0f0; transition: all 0.3s ease; }
+    .company-name { color: var(--accent-red); font-weight: bold; font-size: 14px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+    .title { font-size: 24px; font-weight: 800; color: #333; margin-bottom: 5px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 30px; }
+    .btn-scan { background: linear-gradient(135deg, var(--accent-orange) 0%, #ff4500 100%); color: white; border: none; padding: 18px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(255,69,0,0.25); transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-scan:active { transform: scale(0.98); box-shadow: 0 2px 5px rgba(255,69,0,0.15); }
     .status-container { text-align: left; }
-    .box { padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 5px solid; }
-    .box-status { background: #fff5f5; border-left-color: #e74c3c; }
-    .box-qr { background: #f0fdf4; border-left-color: #2ecc71; }
-    .label { font-size: 10px; font-weight: bold; margin-bottom: 3px; display: block; text-transform: uppercase; }
-    .content { font-size: 13px; color: #444; font-weight: 500; }
+    .box { padding: 15px; border-radius: 10px; margin-bottom: 12px; border-left: 5px solid; transition: all 0.3s ease; }
+    .box-status { background: #fff5f5; border-left-color: var(--accent-red); }
+    .box-qr { background: #f0fdf4; border-left-color: var(--success-green); }
+    .label { font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+    .content { font-size: 14px; color: #444; font-weight: 500; word-wrap: break-word;}
+    
+    /* STRUKTUR MODAL/POP-UP */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+    .modal-content { display: none; position: relative; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 90%; max-width: 380px; text-align: center; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; }
+    .modal-title { font-size: 18px; font-weight: 700; color: #333; margin: 0; }
+    .close-modal { background: none; border: none; font-size: 24px; font-weight: 300; color: #888; cursor: pointer; line-height: 1; padding: 0; }
+    .close-modal:hover { color: var(--accent-red); }
+    #reader { width: 100%; border-radius: 12px; margin-bottom: 20px; overflow: hidden; background: #000; border: 3px solid var(--primary-color); box-sizing: border-box;}
+    #status-scan-modal { font-size: 13px; color: #777; font-weight: 500;}
   </style>
 </head>
 <body>
@@ -30,95 +41,69 @@
     </div>
     <div class="company-name">PT. HYDRAXLE PERKASA</div>
     <div class="title">Form Pengisian Defect</div>
-    <div class="subtitle">Scan QR (GitHub Version)</div>
+    <div class="subtitle">Scanner Web App (v2.0)</div>
 
-    <div id="reader"></div>
-
-    <button class="btn-scan" id="btn-start">📸 MULAI SCAN QR CODE</button>
+    <button class="btn-scan" id="btn-start">📸 MULAI SCAN KODE WR</button>
 
     <div class="status-container">
       <div class="box box-status">
-        <span class="label" style="color:#e74c3c">STATUS</span>
-        <div class="content" id="status-text">Tekan tombol untuk mengaktifkan kamera</div>
+        <span class="label" style="color:#e74c3c">STATUS SISTEM</span>
+        <div class="content" id="status-text">Standby. Tekan tombol untuk scan.</div>
       </div>
       <div class="box box-qr">
-        <span class="label" style="color:#2ecc71">KODE QR TERAKHIR</span>
+        <span class="label" style="color:#2ecc71">HASIL SCAN TERAKHIR</span>
         <div class="content" id="last-qr">-</div>
       </div>
     </div>
   </div>
 
- <script>
-    // URL Web App (Sudah benar ke versi /exec)
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content" id="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Scanner Code WR</h3>
+        <button class="close-modal" id="btn-close-modal">&times;</button>
+      </div>
+      <div id="reader"></div>
+      <p id="status-scan-modal">Arahkan kamera ke Kode QR WR</p>
+    </div>
+  </div>
+
+  <script>
+    // URL Web App GAS Lo
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec"; 
 
     const btnStart = document.getElementById('btn-start');
     const statusText = document.getElementById('status-text');
     const lastQrText = document.getElementById('last-qr');
-    const readerDiv = document.getElementById('reader');
+    
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalContent = document.getElementById('modal-content');
+    const btnCloseModal = document.getElementById('btn-close-modal');
+    const statusScanModal = document.getElementById('status-scan-modal');
+    
     let html5QrCode;
 
-    btnStart.addEventListener('click', function () {
-      readerDiv.style.display = 'block';
-      btnStart.style.display = "none";
-      statusText.innerText = "Meminta akses kamera...";
-      
-      html5QrCode = new Html5Qrcode("reader");
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    function openModalAndStartScanner() {
+        modalOverlay.style.display = 'flex';
+        modalContent.style.display = 'block';
+        statusScanModal.innerText = "Meminta akses kamera...";
+        statusScanModal.style.color = "#777";
+        
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        function(decodedText) {
-          // SUKSES SCAN: Matikan kamera dengan aman (Asinkron)
-          html5QrCode.stop().then(() => {
-            readerDiv.style.display = 'none';
-            lastQrText.innerText = decodedText;
-            statusText.innerText = "Mencari data di Database...";
-            statusText.style.color = "#ff8c00";
-
-            // PERBAIKAN 1 & 2: Ubah parameter jadi '?qr=' dan tambah redirect: 'follow'
-            fetch(`${WEB_APP_URL}?qr=${encodeURIComponent(decodedText)}`, {
-                method: 'GET',
-                redirect: 'follow'
-            })
-              .then(response => response.json())
-              .then(data => {
-                // Sesuaikan dengan respons JSON dari backend Code.js
-                if (data.status === "success" && data.url) {
-                  statusText.innerText = "Ditemukan: " + data.judul;
-                  statusText.style.color = "#2ecc71";
-                  
-                  // PERBAIKAN 3: Buka link di Tab Baru seperti sistem WR kita
-                  setTimeout(() => { 
-                      window.open(data.url, '_blank'); 
-                      // Munculkan lagi tombol scan biar bisa dipakai terus
-                      btnStart.style.display = "block";
-                  }, 1000);
-                  
-                } else {
-                  showError("KODE TIDAK DIKENALI!");
-                }
-              })
-              .catch(err => {
-                console.error(err);
-                showError("GAGAL TERHUBUNG KE DATABASE!");
-              });
-          }).catch(err => {
+        html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            function(decodedText) {
+                processScannedCode(decodedText);
+            }
+        ).catch(err => {
             console.error(err);
-            showError("Gagal mematikan kamera");
-          });
-        }
-      ).catch(err => {
-        showError("Akses Kamera Ditolak / Gagal");
-      });
-    });
-
-    function showError(msg) {
-      statusText.innerText = msg;
-      statusText.style.color = "#e74c3c";
-      btnStart.style.display = "block";
+            statusScanModal.innerText = "Akses Kamera Ditolak / Gagal!";
+            statusScanModal.style.color = "#e74c3c";
+        });
     }
-  </script>
-</body>
-</html>
+
+    function closeModal() {
+        if (html5QrCode && html5QrCode.is
