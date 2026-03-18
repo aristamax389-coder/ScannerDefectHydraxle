@@ -1,121 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scanner Defect</title>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <style>
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background-color: #fdf5e6; 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      min-height: 100vh; 
-      margin: 0; 
-    }
-    .card { 
-      background: white; 
-      padding: 30px; 
-      border-radius: 20px; 
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-      width: 360px; 
-      text-align: center; 
-      border: 1px solid #eee;
-    }
-    .company-name { color: #e74c3c; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
-    .title { font-size: 22px; font-weight: 800; color: #333; margin-bottom: 5px; }
-    .subtitle { font-size: 13px; color: #888; margin-bottom: 25px; }
-    #reader { width: 100%; border-radius: 12px; display: none; margin-bottom: 20px; overflow: hidden;}
-    .btn-scan { 
-      background: linear-gradient(135deg, #ff8c00 0%, #ff4500 100%); 
-      color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; 
-      cursor: pointer; width: 100%; font-size: 14px; margin-bottom: 20px; 
-    }
-    .status-container { text-align: left; }
-    .box { padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 5px solid; }
-    .box-status { background: #fff5f5; border-left-color: #e74c3c; }
-    .label { font-size: 10px; font-weight: bold; margin-bottom: 3px; display: block; }
-    .content { font-size: 13px; color: #444; font-weight: 500; }
-  </style>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background: #000; }
+        #reader { width: 100vw; height: 100vh; }
+        /* Menghilangkan tombol bawaan library agar rapi */
+        #reader button { display: none; }
+    </style>
 </head>
 <body>
-
-  <div class="card">
-    <div class="company-name">PT. HYDRAXLE PERKASA</div>
-    <div class="title">Form Pengisian Defect</div>
-    <div class="subtitle">Scan QR (Jalur Cepat)</div>
-
     <div id="reader"></div>
+    <script>
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 15, qrbox: { width: 250, height: 250 } };
 
-    <button class="btn-scan" id="btn-start">📸 MULAI SCAN QR CODE</button>
-
-    <div class="status-container">
-      <div class="box box-status">
-        <span class="label" style="color:#e74c3c">STATUS SISTEM</span>
-        <div class="content" id="status-text">Menunggu instruksi...</div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Link Apps Script Anda (WAJIB BERAKHIRAN /exec)
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec";
-
-    document.getElementById('btn-start').addEventListener('click', function () {
-      document.getElementById('status-text').innerText = "Mendeteksi kamera perangkat...";
-      document.getElementById('btn-start').style.display = "none";
-      
-      // Cek daftar kamera yang ada di perangkat (Laptop/HP)
-      Html5Qrcode.getCameras().then(devices => {
-        if (devices && devices.length) {
-          // Default: Pilih kamera pertama yang ditemukan (Webcam laptop)
-          let cameraId = devices[0].id;
-          
-          // Jika di HP, cari kamera belakang
-          for (let i = 0; i < devices.length; i++) {
-            if (devices[i].label.toLowerCase().includes("back") || devices[i].label.toLowerCase().includes("belakang") || devices[i].label.toLowerCase().includes("environment")) {
-              cameraId = devices[i].id;
-              break;
-            }
-          }
-
-          document.getElementById('reader').style.display = 'block';
-          const html5QrCode = new Html5Qrcode("reader");
-
-          html5QrCode.start(
-            cameraId, 
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            function(decodedText) {
-              // 1. MATIKAN KAMERA SETELAH SCAN BERHASIL
-              html5QrCode.stop(); 
-              document.getElementById('reader').style.display = 'none';
-              document.getElementById('status-text').innerText = "QR Terbaca! Mengalihkan...";
-              document.getElementById('status-text').style.color = "#2ecc71";
-              
-              // 2. JALUR POTONG KOMPAS (Anti Gagal Terhubung)
-              // Tidak pakai fetch, layar akan langsung melompat ke Apps Script membawa kode QR
-              window.location.href = WEB_APP_URL + "?qr=" + encodeURIComponent(decodedText);
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+                // KIRIM DATA KE DASHBOARD APPS SCRIPT
+                window.parent.postMessage({
+                    type: "QR_SCANNED",
+                    data: decodedText
+                }, "*");
             },
-            function(errorMessage) {
-              // Abaikan error frame scanning (saat kamera belum fokus ke QR)
-            }
-          ).catch((err) => {
-            document.getElementById('status-text').innerText = "Gagal menyalakan kamera (Ditolak browser).";
-            document.getElementById('btn-start').style.display = "block";
-          });
-
-        } else {
-          alert("Tidak ada kamera yang terdeteksi di perangkat Anda!");
-          document.getElementById('btn-start').style.display = "block";
-        }
-      }).catch(err => {
-        alert("Gagal mendeteksi hardware kamera. Izinkan akses di browser.");
-        document.getElementById('status-text').innerText = "Akses Kamera Diblokir Browser";
-        document.getElementById('btn-start').style.display = "block";
-      });
-    });
-  </script>
+            (errorMessage) => { /* scanning... */ }
+        ).catch(err => console.error("Gagal akses kamera:", err));
+    </script>
 </body>
 </html>
