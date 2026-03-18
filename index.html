@@ -1,24 +1,110 @@
-          
-          // Panggil API Google Apps Script dari GitHub
-          // GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
-          const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec";
-         
-          fetch(WEB_APP_URL + "?qr=" + encodeURIComponent(decodedText))
-            .then(response => response.json())
-            .then(data => {
-              if (data.status === "success") {
-                document.getElementById('status-text').innerText = "Ditemukan: " + data.judul;
-                document.getElementById('status-text').style.color = "#2ecc71";
-                setTimeout(function() { window.top.location.href = data.url; }, 1000);
-              } else {
-                document.getElementById('status-text').innerText = "KODE TIDAK DIKENALI!";
-                document.getElementById('status-text').style.color = "#e74c3c";
-                document.getElementById('btn-start').style.display = "block"; 
-              }
-            })
-            .catch(error => {
-              console.error(error);
-              document.getElementById('status-text').innerText = "GAGAL MENGHUBUNGI SERVER!";
-              document.getElementById('status-text').style.color = "#e74c3c";
-              document.getElementById('btn-start').style.display = "block"; // Tampilkan tombol untuk scan ulang
-            });
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanner Defect - PT HYDRAXLE PERKASA</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fdf5e6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 360px; text-align: center; border: 1px solid #eee; }
+    .company-name { color: #e74c3c; font-weight: bold; font-size: 14px; margin-bottom: 5px; text-transform: uppercase; }
+    .title { font-size: 22px; font-weight: 800; color: #333; margin-bottom: 5px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 25px; }
+    #reader { width: 100%; border-radius: 12px; display: none; margin-bottom: 20px; overflow: hidden; background: #000; }
+    .btn-scan { background: linear-gradient(135deg, #ff8c00 0%, #ff4500 100%); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255,69,0,0.3); transition: transform 0.2s; }
+    .btn-scan:active { transform: scale(0.98); }
+    .status-container { text-align: left; }
+    .box { padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 5px solid; }
+    .box-status { background: #fff5f5; border-left-color: #e74c3c; }
+    .box-qr { background: #f0fdf4; border-left-color: #2ecc71; }
+    .label { font-size: 10px; font-weight: bold; margin-bottom: 3px; display: block; text-transform: uppercase; }
+    .content { font-size: 13px; color: #444; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div style="margin-bottom: 15px;">
+      <img src="https://cdn-icons-png.flaticon.com/512/7075/7075333.png" width="50" alt="Logo">
+    </div>
+    <div class="company-name">PT. HYDRAXLE PERKASA</div>
+    <div class="title">Form Pengisian Defect</div>
+    <div class="subtitle">Scan QR (GitHub Version)</div>
+
+    <div id="reader"></div>
+
+    <button class="btn-scan" id="btn-start">📸 MULAI SCAN QR CODE</button>
+
+    <div class="status-container">
+      <div class="box box-status">
+        <span class="label" style="color:#e74c3c">STATUS</span>
+        <div class="content" id="status-text">Tekan tombol untuk mengaktifkan kamera</div>
+      </div>
+      <div class="box box-qr">
+        <span class="label" style="color:#2ecc71">KODE QR TERAKHIR</span>
+        <div class="content" id="last-qr">-</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // URL Web App Anda (Sudah saya ganti ke versi /exec)
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec"; 
+
+    const btnStart = document.getElementById('btn-start');
+    const statusText = document.getElementById('status-text');
+    const lastQrText = document.getElementById('last-qr');
+    const readerDiv = document.getElementById('reader');
+    let html5QrCode;
+
+    btnStart.addEventListener('click', function () {
+      readerDiv.style.display = 'block';
+      btnStart.style.display = "none";
+      statusText.innerText = "Meminta akses kamera...";
+      
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        function(decodedText) {
+          // SUKSES SCAN
+          html5QrCode.stop().then(() => {
+            readerDiv.style.display = 'none';
+            lastQrText.innerText = decodedText;
+            statusText.innerText = "Mencari data di Database...";
+            statusText.style.color = "#ff8c00";
+
+            // Panggil API Google Sheets via Fetch
+            fetch(`${WEB_APP_URL}?scannedCode=${encodeURIComponent(decodedText)}`)
+              .then(response => response.json())
+              .then(data => {
+                if (data && data.url) {
+                  statusText.innerText = "Ditemukan: " + data.judul;
+                  statusText.style.color = "#2ecc71";
+                  setTimeout(() => { window.location.href = data.url; }, 1000);
+                } else {
+                  showError("KODE TIDAK DIKENALI!");
+                }
+              })
+              .catch(err => {
+                console.error(err);
+                showError("GAGAL TERHUBUNG KE DATABASE!");
+              });
+          });
+        }
+      ).catch(err => {
+        showError("Akses Kamera Ditolak / Gagal");
+      });
+    });
+
+    function showError(msg) {
+      statusText.innerText = msg;
+      statusText.style.color = "#e74c3c";
+      btnStart.style.display = "block";
+    }
+  </script>
+</body>
+</html>
