@@ -5,39 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh;}
+        body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #reader { width: 100%; height: 100%; }
-        /* Memaksa video untuk mengisi seluruh ruang iframe */
         #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+        .loading { color: white; font-family: sans-serif; position: absolute; }
     </style>
 </head>
 <body>
+    <div class="loading">Memuat Kamera...</div>
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
-        };
+        const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
 
-        // Otomatis mulai kamera saat halaman iframe dimuat
         html5QrCode.start(
             { facingMode: "environment" }, 
             config,
             (decodedText) => {
-                // Kirim hasil scan ke Apps Script (Parent)
-                window.parent.postMessage({
-                    type: "QR_SCANNED",
-                    data: decodedText
-                }, "*");
+                // KIRIM DATA KEMBALI KE HALAMAN APPS SCRIPT
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: "QR_SCANNED",
+                        data: decodedText
+                    }, "*");
+                    // Tutup jendela kamera otomatis setelah berhasil scan
+                    window.close();
+                } else {
+                    alert("Kamera harus dibuka dari Dashboard utama.");
+                }
             },
-            (errorMessage) => {
-                // Jangan log tiap detik agar tidak lag
-            }
+            (error) => { /* Proses scanning */ }
         ).catch((err) => {
-            console.error("Gagal membuka kamera:", err);
-            // Anda bisa melempar error ke parent jika mau
+            alert("Gagal mengakses kamera. Harap izinkan kamera di browser Anda.");
         });
     </script>
 </body>
