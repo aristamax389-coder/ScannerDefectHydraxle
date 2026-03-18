@@ -4,37 +4,29 @@
     <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: #000; }
+        body { margin: 0; overflow: hidden; background: #000; }
         #reader { width: 100vw; height: 100vh; }
-        #reader video { object-fit: cover !important; }
     </style>
 </head>
 <body>
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        // Konfigurasi dinamis untuk PC dan Mobile
-        const config = { 
-            fps: 15, 
-            qrbox: function(viewWidth, viewHeight) {
-                let minEdge = Math.min(viewWidth, viewHeight);
-                let boxSize = Math.floor(minEdge * 0.7);
-                return { width: boxSize, height: boxSize };
-            },
-            aspectRatio: 1.0
-        };
+        const config = { fps: 15, qrbox: 250, aspectRatio: 1.0 };
 
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            config,
-            (text) => {
-                window.parent.postMessage({ type: "QR_SCANNED", data: text }, "*");
-            }
-        ).catch(err => {
-            console.error("Gagal kamera:", err);
-            // Memberitahu parent jika gagal akses kamera
-            window.parent.postMessage({ type: "QR_ERROR", data: err }, "*");
-        });
+        function start() {
+            html5QrCode.start({ facingMode: "environment" }, config, 
+                (text) => {
+                    window.parent.postMessage({ type: "QR_SCANNED", data: text }, "*");
+                }
+            ).then(() => {
+                window.parent.postMessage({ type: "CAMERA_READY" }, "*");
+            }).catch(err => {
+                window.parent.postMessage({ type: "CAMERA_ERROR", data: err }, "*");
+            });
+        }
+        // Jalankan saat load
+        window.onload = start;
     </script>
 </body>
 </html>
