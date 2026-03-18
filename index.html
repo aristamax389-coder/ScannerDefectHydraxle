@@ -26,33 +26,18 @@
                 document.getElementById('reader').style.display = 'none';
                 const msgEl = document.getElementById('message');
                 msgEl.style.display = 'block';
-                msgEl.innerText = "QR Terbaca! Sedang memuat form...";
+                msgEl.innerText = "QR Terbaca! Sedang memproses...";
 
-                // Kirim hasil scan ke Apps Script
+                // Kirim hasil scan kembali ke Dashboard Utama
                 if (window.opener) {
-                    window.opener.postMessage({
-                        type: "QR_SCANNED",
-                        data: decodedText
-                    }, "*");
+                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
                 } else {
                     msgEl.innerText = "Error: Buka scanner dari Dashboard utama.";
                 }
             },
             (error) => { /* Proses scanning */ }
         ).catch((err) => {
-            alert("Gagal mengakses kamera.");
-        });
-
-        // MENDENGARKAN BALASAN DARI APPS SCRIPT
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'REDIRECT') {
-                // JENDELA INI LANGSUNG BERUBAH MENJADI GOOGLE FORMS!
-                window.location.replace(event.data.url);
-            } else if (event.data.type === 'ERROR') {
-                document.getElementById('message').innerText = "Gagal: " + event.data.msg;
-                // Tutup sendiri kalau gagal
-                setTimeout(() => window.close(), 3000); 
-            }
+            alert("Gagal mengakses kamera. Pastikan memberikan izin kamera.");
         });
     </script>
 </body>
