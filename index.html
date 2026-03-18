@@ -45,7 +45,7 @@
   <div class="card">
     <div class="company-name">PT. HYDRAXLE PERKASA</div>
     <div class="title">Form Pengisian Defect</div>
-    <div class="subtitle">Scan QR (Multi-Device Version)</div>
+    <div class="subtitle">Scan QR (Jalur Cepat)</div>
 
     <div id="reader"></div>
 
@@ -60,7 +60,7 @@
   </div>
 
   <script>
-    // URL sudah diubah dari /dev menjadi /exec agar GitHub bisa mengaksesnya
+    // Link Apps Script Anda (WAJIB BERAKHIRAN /exec)
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec";
 
     document.getElementById('btn-start').addEventListener('click', function () {
@@ -88,31 +88,18 @@
             cameraId, 
             { fps: 10, qrbox: { width: 250, height: 250 } },
             function(decodedText) {
+              // 1. MATIKAN KAMERA SETELAH SCAN BERHASIL
               html5QrCode.stop(); 
               document.getElementById('reader').style.display = 'none';
-              document.getElementById('status-text').innerText = "QR Terbaca! Mencari di Database...";
-              document.getElementById('status-text').style.color = "#ff8c00";
+              document.getElementById('status-text').innerText = "QR Terbaca! Mengalihkan...";
+              document.getElementById('status-text').style.color = "#2ecc71";
               
-              fetch(WEB_APP_URL + "?qr=" + encodeURIComponent(decodedText))
-                .then(response => response.json())
-                .then(data => {
-                  if (data.status === "success") {
-                    document.getElementById('status-text').innerText = "Berhasil! Mengalihkan ke Form...";
-                    document.getElementById('status-text').style.color = "#2ecc71";
-                    setTimeout(function() { window.location.href = data.url; }, 1000);
-                  } else {
-                    document.getElementById('status-text').innerText = "Gagal: QR tidak cocok di Database!";
-                    document.getElementById('status-text').style.color = "#e74c3c";
-                    document.getElementById('btn-start').style.display = "block"; 
-                  }
-                })
-                .catch(error => {
-                  document.getElementById('status-text').innerText = "Gagal terhubung ke Apps Script!";
-                  document.getElementById('btn-start').style.display = "block";
-                });
+              // 2. JALUR POTONG KOMPAS (Anti Gagal Terhubung)
+              // Tidak pakai fetch, layar akan langsung melompat ke Apps Script membawa kode QR
+              window.location.href = WEB_APP_URL + "?qr=" + encodeURIComponent(decodedText);
             },
             function(errorMessage) {
-              // Abaikan error frame scanning
+              // Abaikan error frame scanning (saat kamera belum fokus ke QR)
             }
           ).catch((err) => {
             document.getElementById('status-text').innerText = "Gagal menyalakan kamera (Ditolak browser).";
