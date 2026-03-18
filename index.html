@@ -48,8 +48,8 @@
     </div>
   </div>
 
-  <script>
-    // URL Web App Anda (Sudah saya ganti ke versi /exec)
+ <script>
+    // URL Web App (Sudah benar ke versi /exec)
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec"; 
 
     const btnStart = document.getElementById('btn-start');
@@ -70,21 +70,32 @@
         { facingMode: "environment" },
         config,
         function(decodedText) {
-          // SUKSES SCAN
+          // SUKSES SCAN: Matikan kamera dengan aman (Asinkron)
           html5QrCode.stop().then(() => {
             readerDiv.style.display = 'none';
             lastQrText.innerText = decodedText;
             statusText.innerText = "Mencari data di Database...";
             statusText.style.color = "#ff8c00";
 
-            // Panggil API Google Sheets via Fetch
-            fetch(`${WEB_APP_URL}?scannedCode=${encodeURIComponent(decodedText)}`)
+            // PERBAIKAN 1 & 2: Ubah parameter jadi '?qr=' dan tambah redirect: 'follow'
+            fetch(`${WEB_APP_URL}?qr=${encodeURIComponent(decodedText)}`, {
+                method: 'GET',
+                redirect: 'follow'
+            })
               .then(response => response.json())
               .then(data => {
-                if (data && data.url) {
+                // Sesuaikan dengan respons JSON dari backend Code.js
+                if (data.status === "success" && data.url) {
                   statusText.innerText = "Ditemukan: " + data.judul;
                   statusText.style.color = "#2ecc71";
-                  setTimeout(() => { window.location.href = data.url; }, 1000);
+                  
+                  // PERBAIKAN 3: Buka link di Tab Baru seperti sistem WR kita
+                  setTimeout(() => { 
+                      window.open(data.url, '_blank'); 
+                      // Munculkan lagi tombol scan biar bisa dipakai terus
+                      btnStart.style.display = "block";
+                  }, 1000);
+                  
                 } else {
                   showError("KODE TIDAK DIKENALI!");
                 }
@@ -93,6 +104,9 @@
                 console.error(err);
                 showError("GAGAL TERHUBUNG KE DATABASE!");
               });
+          }).catch(err => {
+            console.error(err);
+            showError("Gagal mematikan kamera");
           });
         }
       ).catch(err => {
