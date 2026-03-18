@@ -1,0 +1,24 @@
+          
+          // Panggil API Google Apps Script dari GitHub
+          // GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
+          const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec";
+         
+          fetch(WEB_APP_URL + "?qr=" + encodeURIComponent(decodedText))
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === "success") {
+                document.getElementById('status-text').innerText = "Ditemukan: " + data.judul;
+                document.getElementById('status-text').style.color = "#2ecc71";
+                setTimeout(function() { window.top.location.href = data.url; }, 1000);
+              } else {
+                document.getElementById('status-text').innerText = "KODE TIDAK DIKENALI!";
+                document.getElementById('status-text').style.color = "#e74c3c";
+                document.getElementById('btn-start').style.display = "block"; 
+              }
+            })
+            .catch(error => {
+              console.error(error);
+              document.getElementById('status-text').innerText = "GAGAL MENGHUBUNGI SERVER!";
+              document.getElementById('status-text').style.color = "#e74c3c";
+              document.getElementById('btn-start').style.display = "block"; // Tampilkan tombol untuk scan ulang
+            });
