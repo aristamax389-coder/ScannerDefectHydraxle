@@ -45,7 +45,7 @@
   <div class="card">
     <div class="company-name">PT. HYDRAXLE PERKASA</div>
     <div class="title">Form Pengisian Defect</div>
-    <div class="subtitle">Scan QR (GitHub Version)</div>
+    <div class="subtitle">Scan QR (Multi-Device Version)</div>
 
     <div id="reader"></div>
 
@@ -60,58 +60,72 @@
   </div>
 
   <script>
-    // ============================================================================
-    // WAJIB DIGANTI: MASUKKAN LINK DEPLOY APPS SCRIPT (YANG BERAKHIRAN /exec) DI SINI
-    // ============================================================================
-    const WEB_APP_URL = "ISI_DENGAN_URL_DEPLOY_APPS_SCRIPT_ANDA_YANG_BENAR";
+    // URL sudah diubah dari /dev menjadi /exec agar GitHub bisa mengaksesnya
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyniC0IZqhJx2og7MpkHLTmCsDzxOenlmUuKzdX5ZQe/exec";
 
     document.getElementById('btn-start').addEventListener('click', function () {
-      document.getElementById('reader').style.display = 'block';
+      document.getElementById('status-text').innerText = "Mendeteksi kamera perangkat...";
       document.getElementById('btn-start').style.display = "none";
-      document.getElementById('status-text').innerText = "Meminta izin akses kamera...";
       
-      const html5QrCode = new Html5Qrcode("reader");
-      
-      html5QrCode.start(
-        { facingMode: "environment" }, // Pakai kamera belakang
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        function(decodedText) {
-          // Jika sukses di-scan, matikan kamera
-          html5QrCode.stop(); 
-          document.getElementById('reader').style.display = 'none';
-          document.getElementById('status-text').innerText = "QR Terbaca! Mencari data Form...";
-          document.getElementById('status-text').style.color = "#ff8c00";
+      // Cek daftar kamera yang ada di perangkat (Laptop/HP)
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+          // Default: Pilih kamera pertama yang ditemukan (Webcam laptop)
+          let cameraId = devices[0].id;
           
-          // Kirim data ke Apps Script
-          fetch(WEB_APP_URL + "?qr=" + encodeURIComponent(decodedText))
-            .then(response => response.json())
-            .then(data => {
-              if (data.status === "success") {
-                document.getElementById('status-text').innerText = "Berhasil! Mengalihkan ke Google Form...";
-                document.getElementById('status-text').style.color = "#2ecc71";
-                
-                // LOGIKA MELOMPAT KE GOOGLE FORMS OTOMATIS
-                setTimeout(function() { 
-                  window.location.href = data.url; 
-                }, 1000);
+          // Jika di HP, cari kamera belakang
+          for (let i = 0; i < devices.length; i++) {
+            if (devices[i].label.toLowerCase().includes("back") || devices[i].label.toLowerCase().includes("belakang") || devices[i].label.toLowerCase().includes("environment")) {
+              cameraId = devices[i].id;
+              break;
+            }
+          }
 
-              } else {
-                document.getElementById('status-text').innerText = "Gagal: Data/QR tidak cocok di Database!";
-                document.getElementById('status-text').style.color = "#e74c3c";
-                document.getElementById('btn-start').style.display = "block"; 
-              }
-            })
-            .catch(error => {
-              document.getElementById('status-text').innerText = "Gagal terhubung ke Database Apps Script!";
-              document.getElementById('btn-start').style.display = "block";
-            });
-        },
-        function(errorMessage) {
-          // Abaikan error saat proses pencarian QR per-frame
+          document.getElementById('reader').style.display = 'block';
+          const html5QrCode = new Html5Qrcode("reader");
+
+          html5QrCode.start(
+            cameraId, 
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            function(decodedText) {
+              html5QrCode.stop(); 
+              document.getElementById('reader').style.display = 'none';
+              document.getElementById('status-text').innerText = "QR Terbaca! Mencari di Database...";
+              document.getElementById('status-text').style.color = "#ff8c00";
+              
+              fetch(WEB_APP_URL + "?qr=" + encodeURIComponent(decodedText))
+                .then(response => response.json())
+                .then(data => {
+                  if (data.status === "success") {
+                    document.getElementById('status-text').innerText = "Berhasil! Mengalihkan ke Form...";
+                    document.getElementById('status-text').style.color = "#2ecc71";
+                    setTimeout(function() { window.location.href = data.url; }, 1000);
+                  } else {
+                    document.getElementById('status-text').innerText = "Gagal: QR tidak cocok di Database!";
+                    document.getElementById('status-text').style.color = "#e74c3c";
+                    document.getElementById('btn-start').style.display = "block"; 
+                  }
+                })
+                .catch(error => {
+                  document.getElementById('status-text').innerText = "Gagal terhubung ke Apps Script!";
+                  document.getElementById('btn-start').style.display = "block";
+                });
+            },
+            function(errorMessage) {
+              // Abaikan error frame scanning
+            }
+          ).catch((err) => {
+            document.getElementById('status-text').innerText = "Gagal menyalakan kamera (Ditolak browser).";
+            document.getElementById('btn-start').style.display = "block";
+          });
+
+        } else {
+          alert("Tidak ada kamera yang terdeteksi di perangkat Anda!");
+          document.getElementById('btn-start').style.display = "block";
         }
-      ).catch((err) => {
-        alert("Gagal mengakses kamera! Pastikan Anda memberi izin kamera pada browser Anda.");
-        document.getElementById('status-text').innerText = "Akses Kamera Ditolak / Error";
+      }).catch(err => {
+        alert("Gagal mendeteksi hardware kamera. Izinkan akses di browser.");
+        document.getElementById('status-text').innerText = "Akses Kamera Diblokir Browser";
         document.getElementById('btn-start').style.display = "block";
       });
     });
