@@ -16,24 +16,31 @@
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        let isScanned = false; // KUNCI PENGAMAN
 
         html5QrCode.start(
             { facingMode: "environment" }, 
             config,
             (decodedText) => {
-                // Tampilan Kamera disembunyikan agar user tahu scan berhasil
-                document.getElementById('reader').style.display = 'none';
-                const msgEl = document.getElementById('message');
-                msgEl.style.display = 'block';
-                msgEl.innerText = "QR Terbaca! Sedang memproses...";
+                // Jika sudah terbaca 1x, abaikan bacaan berikutnya!
+                if (isScanned) return; 
+                isScanned = true;
 
-                // Kirim hasil scan kembali ke Dashboard Utama
-                if (window.opener) {
-                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                } else {
-                    msgEl.innerText = "Error: Buka scanner dari Dashboard utama.";
-                }
+                // MATIKAN MESIN KAMERA SECEPAT MUNGKIN
+                html5QrCode.stop().then(() => {
+                    document.getElementById('reader').style.display = 'none';
+                    const msgEl = document.getElementById('message');
+                    msgEl.style.display = 'block';
+                    msgEl.innerText = "QR Terbaca! Sedang memproses...";
+
+                    // Kirim data HANYA 1 KALI ke Dashboard
+                    if (window.opener) {
+                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    } else {
+                        msgEl.innerText = "Error: Buka scanner dari Dashboard utama.";
+                    }
+                }).catch(err => console.log(err));
             },
             (error) => { /* Proses scanning */ }
         ).catch((err) => {
