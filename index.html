@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; text-align: center;}
@@ -17,48 +17,59 @@
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         
-        // Hapus qrbox agar membaca FULL SCREEN (Solusi ampuh untuk PC & berbagai browser)
-        const config = { fps: 10 };
+        // KUNCI 1: Kembalikan config sederhana seperti Kode 1. Tanpa batasan format aneh-aneh.
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
         let isScanned = false; 
 
-        // Fungsi anti-freeze khusus iOS
-        const forceIOSVideoPlay = () => {
-            const videos = document.querySelectorAll('video');
-            videos.forEach(vid => {
-                vid.setAttribute('playsinline', 'true');
-                vid.setAttribute('webkit-playsinline', 'true');
-                vid.setAttribute('muted', 'true');
-                vid.muted = true;
+        // Fungsi utama
+        const jalankanScanner = (modeKamera) => {
+            html5QrCode.start(
+                modeKamera, 
+                config,
+                (decodedText) => {
+                    if (isScanned) return; 
+                    isScanned = true;
+
+                    const msgEl = document.getElementById('message');
+                    msgEl.style.display = 'block';
+                    msgEl.innerText = "✅ QR Terbaca! Sedang memproses...";
+
+                    if (window.opener) {
+                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    }
+
+                    // KUNCI 2: Ambil trik Jeda Waktu dari Kode 2 agar iPhone tidak nyangkut
+                    setTimeout(() => {
+                        html5QrCode.stop().then(() => {
+                            window.close(); 
+                        }).catch(err => console.log(err));
+                    }, 500);
+                },
+                (error) => {
+                    // KUNCI 3: DIBIARKAN KOSONG SEPERTI KODE 1.
+                    // Ini yang akan menyelamatkan PC dan HP Android dari "Kamera Buta / Lag".
+                }
+            ).then(() => {
+                // KUNCI 4: Hack iOS dilakukan HANYA 1 KALI saat kamera menyala. Bukan 10x sedetik.
+                const videoEl = document.querySelector("#reader video");
+                if(videoEl) {
+                    videoEl.setAttribute("playsinline", "true");
+                    videoEl.setAttribute("webkit-playsinline", "true");
+                }
+            }).catch((err) => {
+                // KUNCI 5: Jika PC menolak 'environment', otomatis coba 'user' (webcam)
+                if (modeKamera.facingMode === "environment") {
+                    console.log("Beralih ke webcam...");
+                    jalankanScanner({ facingMode: "user" });
+                } else {
+                    alert("Gagal mengakses kamera. Pastikan izin kamera diberikan.");
+                }
             });
         };
 
-        // Menggunakan "ideal: environment". 
-        // Otomatis kamera belakang di HP, dan otomatis kamera depan di Laptop.
-        html5QrCode.start(
-            { facingMode: { ideal: "environment" } }, 
-            config, 
-            (decodedText) => {
-                if (isScanned) return; 
-                isScanned = true;
+        // Eksekusi pertama: Selalu minta kamera belakang (Tembus di HP)
+        jalankanScanner({ facingMode: "environment" });
 
-                const msgEl = document.getElementById('message');
-                msgEl.style.display = 'block';
-                msgEl.innerText = "✅ QR Terbaca! Kembali ke form...";
-
-                if (window.opener) {
-                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                }
-
-                setTimeout(() => {
-                    html5QrCode.stop().then(() => {
-                        window.close(); 
-                    }).catch(err => console.log(err));
-                }, 500);
-            },
-            (error) => { forceIOSVideoPlay(); }
-        ).catch((err) => {
-            alert("Gagal mengakses kamera. Pastikan browser memiliki izin kamera.");
-        });
     </script>
 </body>
 </html>
