@@ -17,15 +17,16 @@
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         
+        // REVISI: Hapus format spesifik dan qrbox. 
+        // Membiarkan config kosong akan membuat mesin membaca FULL SCREEN.
+        // Ini adalah kunci agar Laptop/PC bisa kembali membaca QR.
         const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 },
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
+            fps: 15
         };
         
         let isScanned = false; 
 
-        // Fungsi paksaan khusus iOS agar video stream tidak diblokir
+        // Fungsi anti-freeze untuk iOS
         const forceIOSVideoPlay = () => {
             const videos = document.querySelectorAll('video');
             videos.forEach(vid => {
@@ -36,7 +37,6 @@
             });
         };
 
-        // Fungsi utama untuk menjalankan scanner
         const startScan = (cameraParams) => {
             html5QrCode.start(
                 cameraParams, 
@@ -64,17 +64,14 @@
                 }
             ).catch((err) => {
                 console.log("Error kamera:", err);
-                alert("Kamera gagal diakses. Pastikan izin kamera sudah diberikan di pengaturan browser.");
+                alert("Kamera gagal diakses.");
             });
         };
 
-        // METODE BARU: Deteksi ketersediaan kamera perangkat
+        // Deteksi Kamera Cerdas
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length > 0) {
-                // Set default ke kamera pertama (biasanya webcam pada laptop)
                 let selectedCameraId = devices[0].id; 
-                
-                // Cari apakah ada kamera belakang (untuk HP)
                 for (let i = 0; i < devices.length; i++) {
                     let label = devices[i].label.toLowerCase();
                     if (label.includes("back") || label.includes("environment") || label.includes("belakang")) {
@@ -82,15 +79,11 @@
                         break;
                     }
                 }
-                
-                // Mulai scanner dengan ID kamera yang paling tepat
                 startScan(selectedCameraId);
             } else {
-                // Fallback jika array kamera kosong tapi engine mendukung ideal environment
                 startScan({ facingMode: { ideal: "environment" } });
             }
         }).catch(err => {
-            // Fallback terakhir jika browser memblokir fungsi getCameras()
             startScan({ facingMode: { ideal: "environment" } });
         });
     </script>
