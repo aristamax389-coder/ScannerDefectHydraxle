@@ -5,24 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; text-align: center;}
+        body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #reader { width: 100%; height: 100%; position: absolute; top:0; left:0; }
         #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
-        #message { position: relative; z-index: 10; display: none; background: rgba(0,0,0,0.85); color: white; padding: 25px; border-radius: 15px; font-size: 16px; font-weight: bold; width: 85%; max-width: 400px; line-height:1.5;}
     </style>
 </head>
 <body>
-    <div id="message">Memproses...</div>
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         const config = { 
             fps: 10, 
-            qrbox: function(vw, vh) {
-                return { width: Math.floor(Math.min(vw, vh) * 0.7), height: Math.floor(Math.min(vw, vh) * 0.7) };
-            }
+            qrbox: function(vw, vh) { return { width: Math.floor(Math.min(vw, vh) * 0.7), height: Math.floor(Math.min(vw, vh) * 0.7) }; }
         };
-
         let isScanned = false; 
 
         html5QrCode.start(
@@ -33,18 +28,11 @@
                 isScanned = true;
 
                 html5QrCode.stop().then(() => {
-                    document.getElementById('reader').style.display = 'none';
-                    const msgEl = document.getElementById('message');
-                    msgEl.style.display = 'block';
-                    
-                    if (window.opener && window.opener !== window) {
-                        msgEl.innerHTML = "✅ QR Terbaca! Kembali ke Dashboard...";
+                    // Kirim data langsung ke bingkai (iframe) Dashboard Utama!
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    } else if (window.opener) {
                         window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                        // Tutup otomatis layarnya setelah kirim data
-                        setTimeout(() => { window.close(); }, 300);
-                    } else {
-                        // Teguran jika masih buka di dalam WhatsApp!
-                        msgEl.innerHTML = "❌ <b>KONEKSI TERPUTUS!</b><br><br>Anda membuka aplikasi ini di dalam WhatsApp. Sistem Apple memblokir fungsinya.<br><br>Silakan kembali, lalu buka link aplikasi menggunakan browser Safari asli.";
                     }
                 }).catch(err => console.log(err));
             },
