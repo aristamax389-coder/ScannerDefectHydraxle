@@ -2,41 +2,47 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; text-align: center;}
         #reader { width: 100%; height: 100%; position: absolute; top:0; left:0; }
         #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+        #message { position: relative; z-index: 10; display: none; background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; font-size: 16px; font-weight: bold; width: 80%; }
     </style>
 </head>
 <body>
+    <div id="message">Memproses...</div>
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        const config = { 
-            fps: 10, 
-            qrbox: function(vw, vh) { return { width: Math.floor(Math.min(vw, vh) * 0.7), height: Math.floor(Math.min(vw, vh) * 0.7) }; }
-        };
-        let isScanned = false; 
+        const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        let isScanned = false; // KUNCI PENGAMAN
 
         html5QrCode.start(
             { facingMode: "environment" }, 
             config,
             (decodedText) => {
+                // Jika sudah terbaca 1x, abaikan bacaan berikutnya!
                 if (isScanned) return; 
                 isScanned = true;
 
+                // MATIKAN MESIN KAMERA SECEPAT MUNGKIN
                 html5QrCode.stop().then(() => {
-                    // Kirim data langsung ke bingkai (iframe) Dashboard Utama!
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                    } else if (window.opener) {
+                    document.getElementById('reader').style.display = 'none';
+                    const msgEl = document.getElementById('message');
+                    msgEl.style.display = 'block';
+                    msgEl.innerText = "QR Terbaca! Sedang memproses...";
+
+                    // Kirim data HANYA 1 KALI ke Dashboard
+                    if (window.opener) {
                         window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    } else {
+                        msgEl.innerText = "Error: Buka scanner dari Dashboard utama.";
                     }
                 }).catch(err => console.log(err));
             },
-            (error) => {}
+            (error) => { /* Proses scanning */ }
         ).catch((err) => {
             alert("Gagal mengakses kamera. Pastikan memberikan izin kamera.");
         });
