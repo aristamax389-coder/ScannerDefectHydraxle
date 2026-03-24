@@ -17,8 +17,6 @@
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         
-        // REVISI IPHONE: Hapus aspectRatio agar kamera iPhone tidak freeze
-        // Fokuskan engine hanya untuk membaca QR_CODE agar lebih ringan dan cepat
         const config = { 
             fps: 10, 
             qrbox: { width: 250, height: 250 },
@@ -38,33 +36,62 @@
             });
         };
 
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            config,
-            (decodedText) => {
-                if (isScanned) return; 
-                isScanned = true;
+        // Fungsi utama untuk menjalankan scanner
+        const startScan = (cameraParams) => {
+            html5QrCode.start(
+                cameraParams, 
+                config,
+                (decodedText) => {
+                    if (isScanned) return; 
+                    isScanned = true;
 
-                const msgEl = document.getElementById('message');
-                msgEl.style.display = 'block';
-                msgEl.innerText = "✅ QR Terbaca! Kembali ke form...";
+                    const msgEl = document.getElementById('message');
+                    msgEl.style.display = 'block';
+                    msgEl.innerText = "✅ QR Terbaca! Kembali ke form...";
 
-                if (window.opener) {
-                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    if (window.opener) {
+                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    }
+
+                    setTimeout(() => {
+                        html5QrCode.stop().then(() => {
+                            window.close(); 
+                        }).catch(err => console.log(err));
+                    }, 500);
+                },
+                (error) => { 
+                    forceIOSVideoPlay(); 
                 }
+            ).catch((err) => {
+                console.log("Error kamera:", err);
+                alert("Kamera gagal diakses. Pastikan izin kamera sudah diberikan di pengaturan browser.");
+            });
+        };
 
-                setTimeout(() => {
-                    html5QrCode.stop().then(() => {
-                        window.close(); 
-                    }).catch(err => console.log(err));
-                }, 500);
-            },
-            (error) => { 
-                // Selama proses scanning (mencari QR), pastikan iPhone tidak menghentikan video
-                forceIOSVideoPlay(); 
+        // METODE BARU: Deteksi ketersediaan kamera perangkat
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length > 0) {
+                // Set default ke kamera pertama (biasanya webcam pada laptop)
+                let selectedCameraId = devices[0].id; 
+                
+                // Cari apakah ada kamera belakang (untuk HP)
+                for (let i = 0; i < devices.length; i++) {
+                    let label = devices[i].label.toLowerCase();
+                    if (label.includes("back") || label.includes("environment") || label.includes("belakang")) {
+                        selectedCameraId = devices[i].id;
+                        break;
+                    }
+                }
+                
+                // Mulai scanner dengan ID kamera yang paling tepat
+                startScan(selectedCameraId);
+            } else {
+                // Fallback jika array kamera kosong tapi engine mendukung ideal environment
+                startScan({ facingMode: { ideal: "environment" } });
             }
-        ).catch((err) => {
-            alert("Gagal mengakses kamera. Jika pakai iPhone, klik ikon Safari/Browser di pojok layar.");
+        }).catch(err => {
+            // Fallback terakhir jika browser memblokir fungsi getCameras()
+            startScan({ facingMode: { ideal: "environment" } });
         });
     </script>
 </body>
