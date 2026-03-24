@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; text-align: center;}
@@ -16,25 +16,36 @@
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        
+        // CONFIG DIPERBARUI KHUSUS UNTUK MEMPERBAIKI BUG IPHONE/IOS
+        const config = { 
+            fps: 10, 
+            // Ukuran kotak scan dibuat dinamis (70% dari ukuran layar HP)
+            // Ini mencegah distorsi pada kamera iPhone
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                let minEdgePercentage = 0.7; 
+                let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                return { width: qrboxSize, height: qrboxSize };
+            }
+            // aspectRatio: 1.0 -> SENGAJA DIHAPUS AGAR IPHONE BISA FOKUS NORMAL
+        };
+
         let isScanned = false; // KUNCI PENGAMAN
 
         html5QrCode.start(
             { facingMode: "environment" }, 
             config,
             (decodedText) => {
-                // Jika sudah terbaca 1x, abaikan bacaan berikutnya!
                 if (isScanned) return; 
                 isScanned = true;
 
-                // MATIKAN MESIN KAMERA SECEPAT MUNGKIN
                 html5QrCode.stop().then(() => {
                     document.getElementById('reader').style.display = 'none';
                     const msgEl = document.getElementById('message');
                     msgEl.style.display = 'block';
                     msgEl.innerText = "QR Terbaca! Sedang memproses...";
 
-                    // Kirim data HANYA 1 KALI ke Dashboard
                     if (window.opener) {
                         window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
                     } else {
