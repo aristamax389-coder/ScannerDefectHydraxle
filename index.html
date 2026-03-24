@@ -14,23 +14,17 @@
 <body>
     <div id="message">Memproses...</div>
     <div id="reader"></div>
-    
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        
-        // CONFIG DINAMIS: Menyesuaikan ukuran kotak scan otomatis dengan layar HP
-        // Ini adalah kunci agar kamera iPhone tidak memaksakan rasio dan gagal fokus
         const config = { 
             fps: 10, 
-            qrbox: function(viewfinderWidth, viewfinderHeight) {
-                let minEdgePercentage = 0.7; 
-                let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-                let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
-                return { width: qrboxSize, height: qrboxSize };
+            qrbox: function(vw, vh) {
+                let minEdge = Math.min(vw, vh);
+                return { width: Math.floor(minEdge * 0.7), height: Math.floor(minEdge * 0.7) };
             }
         };
-
-        let isScanned = false; // Kunci pengaman agar tidak scan berkali-kali
+        
+        let isScanned = false; 
 
         html5QrCode.start(
             { facingMode: "environment" }, 
@@ -43,20 +37,24 @@
                     document.getElementById('reader').style.display = 'none';
                     const msgEl = document.getElementById('message');
                     msgEl.style.display = 'block';
-                    msgEl.innerText = "QR Terbaca! Sedang memproses...";
+                    msgEl.innerText = "✅ QR Terbaca! Kembali ke Dashboard...";
 
-                    // Kirim data ke Dashboard Apps Script
-                    if (window.opener) {
-                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    // MENGAMBIL URL DASHBOARD LALU PINDAH KEMBALI
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const returnUrl = urlParams.get('returnUrl');
+
+                    if (returnUrl) {
+                        let separator = returnUrl.includes('?') ? '&' : '?';
+                        // Pindah kembali ke Apps Script dengan membawa data QR Code
+                        window.location.href = returnUrl + separator + "qr=" + encodeURIComponent(decodedText);
                     } else {
-                        // Jika Safari iOS tetap memutus koneksi window.opener
-                        msgEl.innerText = "Koneksi terputus oleh sistem iOS. Silakan tutup tab ini dan ulangi klik tombol Scan di Dashboard.";
+                        msgEl.innerText = "Error: Buka scanner dari Dashboard utama.";
                     }
                 }).catch(err => console.log(err));
             },
-            (error) => { /* Biarkan kosong, ini proses scanning frame-by-frame di belakang layar */ }
+            (error) => {}
         ).catch((err) => {
-            alert("Gagal mengakses kamera. Pastikan memberikan izin kamera pada browser Anda.");
+            alert("Gagal mengakses kamera. Pastikan memberikan izin kamera.");
         });
     </script>
 </body>
