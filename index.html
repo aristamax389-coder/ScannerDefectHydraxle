@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; text-align: center;}
@@ -12,50 +12,59 @@
     </style>
 </head>
 <body>
-    <div id="message">Membuka kamera...</div>
+    <div id="message">Memproses...</div>
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        
+        // REVISI IPHONE: Hapus aspectRatio agar kamera iPhone tidak freeze
+        // Fokuskan engine hanya untuk membaca QR_CODE agar lebih ringan dan cepat
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
+        };
+        
         let isScanned = false; 
+
+        // Fungsi paksaan khusus iOS agar video stream tidak diblokir
+        const forceIOSVideoPlay = () => {
+            const videos = document.querySelectorAll('video');
+            videos.forEach(vid => {
+                vid.setAttribute('playsinline', 'true');
+                vid.setAttribute('webkit-playsinline', 'true');
+                vid.setAttribute('muted', 'true');
+                vid.muted = true;
+            });
+        };
 
         html5QrCode.start(
             { facingMode: "environment" }, 
             config,
             (decodedText) => {
-                // Mencegah scan berkali-kali
                 if (isScanned) return; 
                 isScanned = true;
 
-                // 1. BUKTIKAN BAHWA KAMERA BISA BACA QR
-                alert("✅ BERHASIL BACA QR:\n" + decodedText);
-
                 const msgEl = document.getElementById('message');
                 msgEl.style.display = 'block';
-                msgEl.innerText = "QR Terbaca! Mengirim ke sistem...";
+                msgEl.innerText = "✅ QR Terbaca! Kembali ke form...";
 
-                // 2. CEK APAKAH APPLE MEMBLOKIR KONEKSI KE DASHBOARD
                 if (window.opener) {
-                    try {
-                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                        alert("✅ Data terkirim ke Dashboard. Menutup scanner...");
-                    } catch (e) {
-                        alert("❌ GAGAL KIRIM DATA:\nApple memblokir pengiriman data antar tab.");
-                    }
-                } else {
-                    alert("❌ KONEKSI TERPUTUS:\nTab Dashboard (Google) tidak terdeteksi oleh tab Scanner (GitHub).");
+                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
                 }
 
                 setTimeout(() => {
                     html5QrCode.stop().then(() => {
-                        document.getElementById('reader').style.display = 'none';
                         window.close(); 
                     }).catch(err => console.log(err));
-                }, 1000);
+                }, 500);
             },
-            (error) => { /* Abaikan error loop frame */ }
+            (error) => { 
+                // Selama proses scanning (mencari QR), pastikan iPhone tidak menghentikan video
+                forceIOSVideoPlay(); 
+            }
         ).catch((err) => {
-            alert("❌ GAGAL AKSES KAMERA:\nPastikan izin kamera diberikan dan buka lewat browser Safari langsung.");
+            alert("Gagal mengakses kamera. Jika pakai iPhone, klik ikon Safari/Browser di pojok layar.");
         });
     </script>
 </body>
