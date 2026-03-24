@@ -12,7 +12,7 @@
     </style>
 </head>
 <body>
-    <div id="message">Memproses...</div>
+    <div id="message">Membuka kamera...</div>
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
@@ -23,32 +23,39 @@
             { facingMode: "environment" }, 
             config,
             (decodedText) => {
+                // Mencegah scan berkali-kali
                 if (isScanned) return; 
                 isScanned = true;
 
+                // 1. BUKTIKAN BAHWA KAMERA BISA BACA QR
+                alert("✅ BERHASIL BACA QR:\n" + decodedText);
+
                 const msgEl = document.getElementById('message');
                 msgEl.style.display = 'block';
-                msgEl.innerText = "QR Terbaca! Memproses data...";
+                msgEl.innerText = "QR Terbaca! Mengirim ke sistem...";
 
-                // Mengirim data ke Dashboard
+                // 2. CEK APAKAH APPLE MEMBLOKIR KONEKSI KE DASHBOARD
                 if (window.opener) {
-                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                    try {
+                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                        alert("✅ Data terkirim ke Dashboard. Menutup scanner...");
+                    } catch (e) {
+                        alert("❌ GAGAL KIRIM DATA:\nApple memblokir pengiriman data antar tab.");
+                    }
                 } else {
-                    msgEl.innerText = "Selesai dibaca. Silakan kembali ke halaman utama.";
+                    alert("❌ KONEKSI TERPUTUS:\nTab Dashboard (Google) tidak terdeteksi oleh tab Scanner (GitHub).");
                 }
 
-                // PERBAIKAN IPHONE: Beri jeda 500ms agar pesan benar-benar terkirim 
-                // sebelum mematikan kamera dan menutup tab secara paksa
                 setTimeout(() => {
                     html5QrCode.stop().then(() => {
                         document.getElementById('reader').style.display = 'none';
-                        window.close(); // Mencoba menutup tab otomatis jika browser mengizinkan
+                        window.close(); 
                     }).catch(err => console.log(err));
-                }, 500);
+                }, 1000);
             },
-            (error) => { /* Abaikan error pembacaan frame demi frame */ }
+            (error) => { /* Abaikan error loop frame */ }
         ).catch((err) => {
-            alert("Gagal mengakses kamera. Jika menggunakan iPhone via WhatsApp/Line, klik ikon Safari/Browser di pojok layar.");
+            alert("❌ GAGAL AKSES KAMERA:\nPastikan izin kamera diberikan dan buka lewat browser Safari langsung.");
         });
     </script>
 </body>
