@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; text-align: center;}
@@ -17,34 +17,38 @@
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-        let isScanned = false; // KUNCI PENGAMAN
+        let isScanned = false; 
 
         html5QrCode.start(
             { facingMode: "environment" }, 
             config,
             (decodedText) => {
-                // Jika sudah terbaca 1x, abaikan bacaan berikutnya!
                 if (isScanned) return; 
                 isScanned = true;
 
-                // MATIKAN MESIN KAMERA SECEPAT MUNGKIN
-                html5QrCode.stop().then(() => {
-                    document.getElementById('reader').style.display = 'none';
-                    const msgEl = document.getElementById('message');
-                    msgEl.style.display = 'block';
-                    msgEl.innerText = "QR Terbaca! Sedang memproses...";
+                const msgEl = document.getElementById('message');
+                msgEl.style.display = 'block';
+                msgEl.innerText = "QR Terbaca! Memproses data...";
 
-                    // Kirim data HANYA 1 KALI ke Dashboard
-                    if (window.opener) {
-                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                    } else {
-                        msgEl.innerText = "Error: Buka scanner dari Dashboard utama.";
-                    }
-                }).catch(err => console.log(err));
+                // Mengirim data ke Dashboard
+                if (window.opener) {
+                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+                } else {
+                    msgEl.innerText = "Selesai dibaca. Silakan kembali ke halaman utama.";
+                }
+
+                // PERBAIKAN IPHONE: Beri jeda 500ms agar pesan benar-benar terkirim 
+                // sebelum mematikan kamera dan menutup tab secara paksa
+                setTimeout(() => {
+                    html5QrCode.stop().then(() => {
+                        document.getElementById('reader').style.display = 'none';
+                        window.close(); // Mencoba menutup tab otomatis jika browser mengizinkan
+                    }).catch(err => console.log(err));
+                }, 500);
             },
-            (error) => { /* Proses scanning */ }
+            (error) => { /* Abaikan error pembacaan frame demi frame */ }
         ).catch((err) => {
-            alert("Gagal mengakses kamera. Pastikan memberikan izin kamera.");
+            alert("Gagal mengakses kamera. Jika menggunakan iPhone via WhatsApp/Line, klik ikon Safari/Browser di pojok layar.");
         });
     </script>
 </body>
