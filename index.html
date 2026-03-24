@@ -17,16 +17,11 @@
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         
-        // REVISI: Hapus format spesifik dan qrbox. 
-        // Membiarkan config kosong akan membuat mesin membaca FULL SCREEN.
-        // Ini adalah kunci agar Laptop/PC bisa kembali membaca QR.
-        const config = { 
-            fps: 15
-        };
-        
+        // Config standar tanpa aspectRatio agar iPhone tidak freeze
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
         let isScanned = false; 
 
-        // Fungsi anti-freeze untuk iOS
+        // Fungsi anti-freeze khusus iOS
         const forceIOSVideoPlay = () => {
             const videos = document.querySelectorAll('video');
             videos.forEach(vid => {
@@ -37,54 +32,49 @@
             });
         };
 
-        const startScan = (cameraParams) => {
-            html5QrCode.start(
-                cameraParams, 
-                config,
-                (decodedText) => {
-                    if (isScanned) return; 
-                    isScanned = true;
+        // Fungsi ketika QR berhasil terbaca
+        const onScanSuccess = (decodedText) => {
+            if (isScanned) return; 
+            isScanned = true;
 
-                    const msgEl = document.getElementById('message');
-                    msgEl.style.display = 'block';
-                    msgEl.innerText = "✅ QR Terbaca! Kembali ke form...";
+            const msgEl = document.getElementById('message');
+            msgEl.style.display = 'block';
+            msgEl.innerText = "✅ QR Terbaca! Kembali ke form...";
 
-                    if (window.opener) {
-                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                    }
+            if (window.opener) {
+                window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
+            }
 
-                    setTimeout(() => {
-                        html5QrCode.stop().then(() => {
-                            window.close(); 
-                        }).catch(err => console.log(err));
-                    }, 500);
-                },
-                (error) => { 
-                    forceIOSVideoPlay(); 
-                }
-            ).catch((err) => {
-                console.log("Error kamera:", err);
-                alert("Kamera gagal diakses.");
-            });
+            // Jeda agar data sempat terkirim sebelum tab ditutup paksa
+            setTimeout(() => {
+                html5QrCode.stop().then(() => {
+                    window.close(); 
+                }).catch(err => console.log(err));
+            }, 500);
         };
 
-        // Deteksi Kamera Cerdas
-        Html5Qrcode.getCameras().then(devices => {
-            if (devices && devices.length > 0) {
-                let selectedCameraId = devices[0].id; 
-                for (let i = 0; i < devices.length; i++) {
-                    let label = devices[i].label.toLowerCase();
-                    if (label.includes("back") || label.includes("environment") || label.includes("belakang")) {
-                        selectedCameraId = devices[i].id;
-                        break;
-                    }
-                }
-                startScan(selectedCameraId);
-            } else {
-                startScan({ facingMode: { ideal: "environment" } });
-            }
-        }).catch(err => {
-            startScan({ facingMode: { ideal: "environment" } });
+        // EKSEKUSI PERTAMA: Coba paksa kamera belakang (Untuk HP: Android & iPhone)
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config, 
+            onScanSuccess, 
+            (error) => { forceIOSVideoPlay(); }
+        ).catch((err) => {
+            
+            // EKSEKUSI KEDUA (FALLBACK): 
+            // Jika gagal (biasanya karena Laptop/PC tidak punya kamera belakang),
+            // langsung otomatis ganti ke mode Webcam/Kamera Depan
+            console.log("Kamera belakang tidak ada, beralih ke Webcam Laptop...");
+            
+            html5QrCode.start(
+                { facingMode: "user" }, 
+                config, 
+                onScanSuccess, 
+                (error) => { forceIOSVideoPlay(); }
+            ).catch((err2) => {
+                alert("Gagal mengakses kamera. Pastikan browser memiliki izin kamera.");
+            });
+            
         });
     </script>
 </body>
