@@ -14,24 +14,23 @@
 <body>
     <div id="message">Memproses...</div>
     <div id="reader"></div>
+    
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         
-        // CONFIG DIPERBARUI KHUSUS UNTUK MEMPERBAIKI BUG IPHONE/IOS
+        // CONFIG DINAMIS: Menyesuaikan ukuran kotak scan otomatis dengan layar HP
+        // Ini adalah kunci agar kamera iPhone tidak memaksakan rasio dan gagal fokus
         const config = { 
             fps: 10, 
-            // Ukuran kotak scan dibuat dinamis (70% dari ukuran layar HP)
-            // Ini mencegah distorsi pada kamera iPhone
             qrbox: function(viewfinderWidth, viewfinderHeight) {
                 let minEdgePercentage = 0.7; 
                 let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
                 let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
                 return { width: qrboxSize, height: qrboxSize };
             }
-            // aspectRatio: 1.0 -> SENGAJA DIHAPUS AGAR IPHONE BISA FOKUS NORMAL
         };
 
-        let isScanned = false; // KUNCI PENGAMAN
+        let isScanned = false; // Kunci pengaman agar tidak scan berkali-kali
 
         html5QrCode.start(
             { facingMode: "environment" }, 
@@ -46,16 +45,18 @@
                     msgEl.style.display = 'block';
                     msgEl.innerText = "QR Terbaca! Sedang memproses...";
 
+                    // Kirim data ke Dashboard Apps Script
                     if (window.opener) {
                         window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
                     } else {
-                        msgEl.innerText = "Error: Buka scanner dari Dashboard utama.";
+                        // Jika Safari iOS tetap memutus koneksi window.opener
+                        msgEl.innerText = "Koneksi terputus oleh sistem iOS. Silakan tutup tab ini dan ulangi klik tombol Scan di Dashboard.";
                     }
                 }).catch(err => console.log(err));
             },
-            (error) => { /* Proses scanning */ }
+            (error) => { /* Biarkan kosong, ini proses scanning frame-by-frame di belakang layar */ }
         ).catch((err) => {
-            alert("Gagal mengakses kamera. Pastikan memberikan izin kamera.");
+            alert("Gagal mengakses kamera. Pastikan memberikan izin kamera pada browser Anda.");
         });
     </script>
 </body>
