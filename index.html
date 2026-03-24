@@ -16,60 +16,59 @@
     <div id="reader"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        
-        // KUNCI 1: Kembalikan config sederhana seperti Kode 1. Tanpa batasan format aneh-aneh.
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
         let isScanned = false; 
 
-        // Fungsi utama
-        const jalankanScanner = (modeKamera) => {
-            html5QrCode.start(
-                modeKamera, 
-                config,
-                (decodedText) => {
-                    if (isScanned) return; 
-                    isScanned = true;
+        // 1. SISTEM DETEKSI PERANGKAT PINTAR
+        // Cek apakah perangkat yang membuka web ini adalah perangkat iOS (iPhone/iPad/iPod)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-                    const msgEl = document.getElementById('message');
-                    msgEl.style.display = 'block';
-                    msgEl.innerText = "✅ QR Terbaca! Sedang memproses...";
+        // 2. CONFIG DINAMIS (BUNGLON)
+        let config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        // Jika BUKAN iPhone (Artinya Android atau PC), pasang aspectRatio: 1.0 seperti Kode 1
+        if (!isIOS) {
+            config.aspectRatio = 1.0; 
+        }
 
-                    if (window.opener) {
-                        window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
-                    }
+        // 3. EKSEKUSI KAMERA (Menggunakan facingMode Code 1 yang terbukti sukses)
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+                if (isScanned) return; 
+                isScanned = true;
 
-                    // KUNCI 2: Ambil trik Jeda Waktu dari Kode 2 agar iPhone tidak nyangkut
-                    setTimeout(() => {
-                        html5QrCode.stop().then(() => {
-                            window.close(); 
-                        }).catch(err => console.log(err));
-                    }, 500);
-                },
-                (error) => {
-                    // KUNCI 3: DIBIARKAN KOSONG SEPERTI KODE 1.
-                    // Ini yang akan menyelamatkan PC dan HP Android dari "Kamera Buta / Lag".
+                const msgEl = document.getElementById('message');
+                msgEl.style.display = 'block';
+                msgEl.innerText = "✅ QR Terbaca! Sedang memproses...";
+
+                // Kirim data ke Google Apps Script
+                if (window.opener) {
+                    window.opener.postMessage({ type: "QR_SCANNED", data: decodedText }, "*");
                 }
-            ).then(() => {
-                // KUNCI 4: Hack iOS dilakukan HANYA 1 KALI saat kamera menyala. Bukan 10x sedetik.
+
+                // Trik Jeda Waktu dari Code 2 (Penting agar iPhone WA tidak terputus)
+                setTimeout(() => {
+                    html5QrCode.stop().then(() => {
+                        window.close(); 
+                    }).catch(err => console.log(err));
+                }, 500);
+            },
+            (error) => {
+                // Dibiarkan kosong agar PC dan Android tidak lag/buta (seperti Kode 1)
+            }
+        ).then(() => {
+            // 4. HACK VIDEO KHUSUS iPHONE
+            if (isIOS) {
                 const videoEl = document.querySelector("#reader video");
                 if(videoEl) {
                     videoEl.setAttribute("playsinline", "true");
                     videoEl.setAttribute("webkit-playsinline", "true");
                 }
-            }).catch((err) => {
-                // KUNCI 5: Jika PC menolak 'environment', otomatis coba 'user' (webcam)
-                if (modeKamera.facingMode === "environment") {
-                    console.log("Beralih ke webcam...");
-                    jalankanScanner({ facingMode: "user" });
-                } else {
-                    alert("Gagal mengakses kamera. Pastikan izin kamera diberikan.");
-                }
-            });
-        };
-
-        // Eksekusi pertama: Selalu minta kamera belakang (Tembus di HP)
-        jalankanScanner({ facingMode: "environment" });
-
+            }
+        }).catch((err) => {
+            alert("Gagal mengakses kamera. Pastikan browser memiliki izin kamera.");
+        });
     </script>
 </body>
 </html>
